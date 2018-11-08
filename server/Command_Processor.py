@@ -3,8 +3,10 @@ import socket
 import datetime
 from html_utils import *
 from Agent import *
+from utils import *
 import dDANN
 import Recommend_Agent
+
 """
 
 """
@@ -14,6 +16,20 @@ class Command_Processor:
         """
         규칙 리스트와 기능 설명은 개발자 문서를 참고
         """
+
+        #Language Model Variable
+        #file = open('dictionary_high_count', 'r', encoding='utf-8')
+        #words = file.read().split()
+        #file.close()
+        words = []
+
+        self.Dictionary = np.array(words, dtype='<U20')
+        self.Dictionary.sort()
+        self.vector = np.zeros(shape=[50000, 50000], dtype=np.int16)
+
+        self.command_count = 0
+        self.command_list = []
+
         try:
             recommend_file = open('recommend.txt', 'r', encoding='utf-8')
         except:
@@ -47,8 +63,7 @@ class Command_Processor:
 
         self.number_dic = ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구', '십', '십일', '십이', '십삼',
                            '십사', '십오']
-        self.category_dic = ['정치', '경제', '사회', '아이티', '생활', '날씨', '게임', '스포츠', '연예', '소설', '만화', '애니메이션',
-                             '프로그래밍', '입시', '음악', '영화', '음식', '자동차']
+        self.category_dic = ['정치', '경제', '사회', '게임', '스포츠', '음악', '영화', '연예']
 
         self.recommend_direction = False
         self.arg_index = 0
@@ -60,8 +75,10 @@ class Command_Processor:
 
         self.Command_Dic = ['이동', '설정', '다음글', '검색', '목록', '다음', '선택', '리스트', '재생', '추천', '비추천',
                             '탐색', '메인', '추천']
+        self.Command_Length = [1, 2, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
         self.Function_list = []
 
+        #명령어 실행 함수 리스트
         self.Function_list.append(self.Function_1)
         self.Function_list.append(self.Function_2)
         self.Function_list.append(self.Function_3)
@@ -146,7 +163,6 @@ class Command_Processor:
         #crawler
         self.Crawler = Web_Crawler()
 
-        #self.agent = Agent(do_indexing=False, do_post_processing=False)
         try:
             date_log = open('date_log', 'r', encoding='utf-8')
             time = str(datetime.datetime.now()).split(' ')[0]
@@ -279,72 +295,108 @@ class Command_Processor:
             self.Complete_Url = 'http://' + self.Url
 
     def process(self, command):
-        TK = str(command).split()
+        TK = str(command).split('#')
+        TK[1] = TK[1].replace(' ', '')
+
+        if TK[0] == '0':
+            self.command_count = 0
+            self.command_list = []
+            self.command_list.append(TK[1])
+        else:
+            self.command_list.append(TK[1])
+
         rule_idx = -1
+        min_score = 7.5
+
+        for i in range(len(self.Command_Dic)):
+            score = distance_of_words(self.Command_Dic[i], self.command_list[0])
+            if min_score > score:
+                rule_idx = i
 
         try:
-            rule_idx = self.Command_Dic.index(TK[0])
+            rule_idx = self.Command_Dic.index(self.command_list[0])
         except:
             0
         print(rule_idx)
         if rule_idx != -1:
-            code, result = self.Function_list[rule_idx](TK)
-
-            return code, result
+            if self.Command_Length[rule_idx] == self.command_count:
+                code, result = self.Function_list[rule_idx](self.command_list)
+                self.command_count += 1
+                return code, result
+            else:
+                self.command_count += 1
+                return 0, 0
 
         return -1, -1
 
     def search_dictionary(self, word):
-        try:
-            idx = self.word_dic.index(word)
-            return idx
-        except:
-            return -1
+        min_score = 7.5
+        idx = -1
+        for i in range(len(self.page_names)):
+            score = distance_of_words(self.page_names[i], word)
+            if min_score > score:
+                min_score = score
+                idx = i
+
+        return idx
 
     def search_category(self, word):
-        try:
-            idx = self.page_names.index(word)
-            return idx
-        except:
-            return -1
+        min_score = 7.5
+        idx = -1
+        for i in range(len(self.page_names)):
+            score = distance_of_words(self.page_names[i], word)
+            if min_score > score:
+                min_score = score
+                idx = i
+
+        return idx
 
     def search_page(self, word):
-        try:
-            idx = self.page_names.index(word)
-            return idx
-        except:
-            return -1
+        min_score = 7.5
+        idx = -1
+        for i in range(len(self.page_names)):
+            score = distance_of_words(self.page_names[i], word)
+            if min_score > score:
+                min_score = score
+                idx = i
+
+        return idx
 
     def search_page_r(self, word):
-        try:
-            idx = self.page_urls_r.index(word)
-            return idx
-        except:
-            return -1
+        min_score = 7.5
+        idx = -1
+        for i in range(len(self.page_urls_r)):
+            score = distance_of_words(self.page_urls_r[i], word)
+            if min_score > score:
+                min_score = score
+                idx = i
+
+        return idx
 
     def search_page_c(self, word):
-        try:
-            idx = self.page_urls_c.index(word)
-            return idx
-        except:
-            return -1
+        min_score = 7.5
+        idx = -1
+        for i in range(len(self.page_urls_c)):
+            score = distance_of_words(self.page_urls_c[i], word)
+            if min_score > score:
+                min_score = score
+                idx = i
+
+        return idx
 
     def search_page_a(self, word):
         self.Crawler.Href_title_list = []
         self.Crawler.Href_link_list = []
 
         idxs = []
-        index = 0
+        min_score = 3.5
 
-        while True:
-            try:
-                idx = self.page_urls_a.index(word, index)
-                idxs.append(idx)
-                index = idx + 1
-                if index >= len(self.page_urls_a):
-                    return idxs
-            except:
-                return idxs
+        for i in range(len(self.page_urls_a)):
+            score = distance_of_words(self.page_urls_a[i], word)
+            if min_score > score:
+                idxs.append(i)
+
+        return idxs
 
     ########
     # Function의 자세한 기능은 개발자 문서에서 확인가능
@@ -352,6 +404,7 @@ class Command_Processor:
 
     def Function_1(self, TK):
         #move Funtion
+        print(TK)
         page_name = TK[1]
         idx = self.search_page(page_name)
         print(idx)
@@ -368,11 +421,12 @@ class Command_Processor:
 
             self.Complete_Url = ''
 
-            return 0, None
+            return 1, "완료"
         else:
             return -1, None
 
     def Function_2(self, TK):
+        print(TK)
         rule_name = TK[1]
         word = TK[2]
         idx = self.search_dictionary(word)
@@ -396,10 +450,30 @@ class Command_Processor:
                     return -1, None
 
     def Function_4(self, TK):
+        for i in range(len(TK)):
+            max_score = 0
+            word_correct = ''
+
+            idx = self.Dictionary.searchsorted(TK[i])
+            if idx < self.Dictionary.shape[0]:
+                if self.Dictionary[idx] == TK[i]:
+                    for j in range(self.Dictionary.shape[0]):
+                        if self.vector[idx, j] > 0:
+                            score = distance_of_words(TK[i], self.Dictionary[j])
+                            if score < 6.5:
+                                if self.vector[idx, j] > max_score:
+                                    word_correct = self.Dictionary[j]
+                                    max_score = self.vector[idx, j]
+
+            if word_correct != '':
+                TK[i] = word_correct
+
         search_text = ''
+
         for i in range(1, len(TK)):
             search_text += TK + ' '
 
+        #Stemming  through Network
         self.conn.send("".join(search_text).encode(encoding='utf-8'))  # 받은 데이터를 그대로 클라이언트에 전송
         data = self.conn.recv(1024)
 
@@ -412,6 +486,10 @@ class Command_Processor:
             doc_idx = self.agent.search(qa_processed.split(' '))
             doc = self.agent.get_doc(doc_idx)
             doc_processed = preprocess_document(doc)
+
+            #spelling checker
+
+            ###
 
             start_index, stop_index = self.classifier.Propagate_QA(Model=1, TK1=doc_processed.split(), TK2=qa_processed.split())
 
@@ -430,10 +508,9 @@ class Command_Processor:
 
             #리턴값 설정해야함
 
-
     def Function_5(self, TK):
-
         idxs = self.search_page_a(self.Url)
+
         if len(idxs) != 0:
             for idx in idxs:
                 href_tag = self.href_tags[idx]
@@ -449,7 +526,7 @@ class Command_Processor:
                 if self.recommend_direction is True:
                     self.crawl_with_href()
 
-            return 0, None
+            return 1, '완료'
         else:
             return -1, None
 
@@ -546,8 +623,8 @@ class Command_Processor:
             qa_processed = str(data, encoding='utf-8').replace('\n', '').replace('  ', ' ').strip()
             print(qa_processed)
 
-            doc_idx = agent.search(qa_processed.split(' '))
-            doc = agent.get_doc(doc_idx)
+            doc_idx = self.agent.search(qa_processed.split(' '))
+            doc = self.agent.get_doc(doc_idx)
 
             return 1, doc
 

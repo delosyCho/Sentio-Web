@@ -35,7 +35,7 @@ class Dictionary:
 
         return result
 
-    def __init__(self, do_indexing=True, do_post_processing=True):
+    def __init__(self, do_indexing=True, do_post_processing=True, base_folder='indexing/'):
         self.V_C_dictionary = []
         for i in range(ord('ㄱ'), ord('ㅎ') + 1):
             for j in range(ord('ㅏ'), ord('ㅣ') + 1):
@@ -47,7 +47,7 @@ class Dictionary:
         self.Inverted_Index = []
         self.Frequency = 0
         if do_post_processing is False and do_indexing is False:
-            file = open('indexing/' + 'words', 'r', encoding='utf-8')
+            file = open(base_folder + 'words', 'r', encoding='utf-8')
             TK = file.read().split('#')
             self.Dictionary = []
             for i in range(len(TK)):
@@ -55,7 +55,7 @@ class Dictionary:
             file.close()
             self.Dictionary = np.array(self.Dictionary, dtype='<U30')
 
-            file = open('indexing/' + 'titles', 'r', encoding='utf-8')
+            file = open(base_folder + 'titles', 'r', encoding='utf-8')
             TK = file.read().split('#')
             self.Wiki_Titles = []
             for i in range(len(TK)):
@@ -63,7 +63,7 @@ class Dictionary:
             file.close()
             self.Wiki_Titles = np.array(self.Wiki_Titles, dtype='<U30')
 
-            file = open('indexing/' + 'config', 'r', encoding='utf-8')
+            file = open(base_folder + 'config', 'r', encoding='utf-8')
             self.Documents_Num = int(file.read())
             file.close()
 
@@ -277,3 +277,6 @@ class Dictionary:
             return idx, v_c
         else:
             return -1, v_c
+
+    def get_doc(self, idx):
+        return self.Documents[idx]
